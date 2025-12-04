@@ -46,13 +46,14 @@ class MyPlugin(Star):
     async def delayed_push(self, umo: str):
         await asyncio.sleep(5)
 
-        chain = MessageChain().text("⏰ 这是 5 秒后的主动消息（SDK 版）")
-
         logger.info("[delayed_push] 开始主动推送消息")
+
+        # MessageChain 的正确写法（注意是 .text 不是 .message）
+        chain = MessageChain().text("⏰ 这是 5 秒后的主动消息（SDK 版）")
 
         result = await self.context.send_message(umo, chain)
 
-        logger.info(f"[delayed_push] 主动消息返回：{result}")
+        logger.info(f"[delayed_push] 主动消息返回：{result}")s
 
     async def terminate(self):
         """插件卸载时执行（可选）"""
