@@ -5,56 +5,47 @@ from astrbot.api.event import MessageChain
 import asyncio
 
 
-@register("helloworld", "YourName", "一个简单的 Hello World 插件（含主动消息示例）", "1.0.0")
+@register("helloworld", "YourName", "一个简单的 Hello World 插件（含主动消息）", "1.0.0")
 class MyPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
-        self.saved_umo = None  # 用于保存 unified_msg_origin（主动消息必须）
 
     async def initialize(self):
-        """插件初始化（可选）"""
         pass
 
-    # -------------------------------------------------------
-    # ⭐ 保留你的原本 helloworld 指令，不做修改
-    # -------------------------------------------------------
     @filter.command("helloworld")
     async def helloworld(self, event: AstrMessageEvent):
         """这是一个 hello world 指令"""
 
         user_name = event.get_sender_name()
         message_str = event.message_str
-        message_chain = event.get_messages()
+        logger.info(event.get_messages())
 
-        logger.info(message_chain)
+        # 先回复用户（你的原功能）
+        yield event.plain_result(f"Hello, {user_name}, 你发了 {message_str}!")
 
-        yield event.plain_result(
-            f"Hello, {user_name}, 你发了 {message_str}!"
-        )
-
-    @filter.command("delayhello")
-    async def delayhello(self, event: AstrMessageEvent):
+        # 取出 unified_msg_origin（主动消息必须）
         umo = event.unified_msg_origin
-        logger.info(f"[delayhello] 保存的 UMO = {umo}")
+        logger.info(f"[helloworld] 保存的 unified_msg_origin = {umo}")
 
-        # 正常回复
-        await event.send(f"消息已收到，我将在 5 秒后主动发送消息。")
-
-        # 不使用 yield，避免上下文结束
+        # 在后台启动 5 秒后主动推送任务
         asyncio.create_task(self.delayed_push(umo))
 
+
     async def delayed_push(self, umo: str):
+        """5 秒后主动推送消息"""
         await asyncio.sleep(5)
 
-        logger.info("[delayed_push] 开始主动推送消息")
+        logger.info("[delayed_push] 任务开始执行，准备主动发送消息")
 
-        # MessageChain 的正确写法（注意是 .text 不是 .message）
-        chain = MessageChain().text("⏰ 这是 5 秒后的主动消息（SDK 版）")
+        # 正确构造 MessageChain（官方推荐写法）
+        chain = MessageChain().message("⏰ 这是 5 秒后的主动消息！")
 
+        # 主动推送消息
         result = await self.context.send_message(umo, chain)
 
-        logger.info(f"[delayed_push] 主动消息返回：{result}")s
+        logger.info(f"[delayed_push] 主动消息发送结果：{result}")
+
 
     async def terminate(self):
-        """插件卸载时执行（可选）"""
         pass
