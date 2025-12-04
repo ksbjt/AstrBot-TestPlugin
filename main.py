@@ -32,41 +32,27 @@ class MyPlugin(Star):
             f"Hello, {user_name}, 你发了 {message_str}!"
         )
 
-    # -------------------------------------------------------
-    # ⭐ 新增 delayhello 指令：测试主动消息推送
-    # -------------------------------------------------------
     @filter.command("delayhello")
     async def delayhello(self, event: AstrMessageEvent):
-        """发送后 5 秒主动推送一条消息"""
+        umo = event.unified_msg_origin
+        logger.info(f"[delayhello] 保存的 UMO = {umo}")
 
-        # 保存会话 ID（主动消息必须）
-        self.saved_umo = event.unified_msg_origin
+        # 正常回复
+        await event.send(f"消息已收到，我将在 5 秒后主动发送消息。")
 
-        user_name = event.get_sender_name()
-        message_str = event.message_str
-        logger.info(f"收到 delayhello 指令，来自：{user_name}")
+        # 不使用 yield，避免上下文结束
+        asyncio.create_task(self.delayed_push(umo))
 
-        # 先回复用户
-        yield event.plain_result(
-            f"好的 {user_name}，我将在 5 秒后主动给你发一条消息！你刚刚说的是：{message_str}"
-        )
-
-        # 创建异步任务，不阻塞机器人
-        asyncio.create_task(self.delay_task())
-
-    # 实际执行延迟推送
-    async def delay_task(self):
+    async def delayed_push(self, umo: str):
         await asyncio.sleep(5)
 
-        if not self.saved_umo:
-            logger.error("没有保存 unified_msg_origin，主动消息发送失败")
-            return
+        chain = MessageChain().text("⏰ 这是 5 秒后的主动消息（SDK 版）")
 
-        chain = MessageChain().text("⏰ 这是我 5 秒后的主动消息推送！")
+        logger.info("[delayed_push] 开始主动推送消息")
 
-        await self.context.send_message(self.saved_umo, chain)
+        result = await self.context.send_message(umo, chain)
 
-        logger.info("主动消息发送成功！")
+        logger.info(f"[delayed_push] 主动消息返回：{result}")
 
     async def terminate(self):
         """插件卸载时执行（可选）"""
